@@ -15,9 +15,10 @@ export async function POST(req) {
   const progressFile = path.join(tempDir, `progress-${fileId}.json`);
 
   return new Promise((resolve) => {
-    // Initial progress setup
+    // Initial progress file
     fs.writeFileSync(progressFile, JSON.stringify({ percent: 0 }));
 
+    // Run yt-dlp on the general social media/status URL
     const ytDlp = spawn("C:\\yt-dlp\\yt-dlp.exe", [
       "--ffmpeg-location", "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin",
       "--cookies-from-browser", "firefox",
@@ -29,7 +30,6 @@ export async function POST(req) {
 
     ytDlp.stdout.on("data", (data) => {
       const outputStr = data.toString();
-      // Match lines like "[download]  12.4% of ..."
       const match = outputStr.match(/\[download\]\s+(\d+(?:\.\d+)?)\%/);
       if (match) {
         const percent = parseFloat(match[1]);
@@ -42,11 +42,10 @@ export async function POST(req) {
     });
 
     ytDlp.stderr.on("data", (data) => {
-      console.error("YT-DLP STDERR:", data.toString());
+      console.error("YT-DLP STATUS STDERR:", data.toString());
     });
 
     ytDlp.on("close", (code) => {
-      // Clean up progress file
       try {
         if (fs.existsSync(progressFile)) fs.unlinkSync(progressFile);
       } catch {}
@@ -58,7 +57,7 @@ export async function POST(req) {
       }
 
       if (!fs.existsSync(output)) {
-        resolve(new Response("Video file not created", { status: 500 }));
+        resolve(new Response("File not created", { status: 500 }));
         return;
       }
 
@@ -67,11 +66,10 @@ export async function POST(req) {
       const response = new Response(video, {
         headers: {
           "Content-Type": "video/mp4",
-          "Content-Disposition": "attachment; filename=reel.mp4",
+          "Content-Disposition": "attachment; filename=status_video.mp4",
         },
       });
 
-      // Cleanup temp output file after response is resolved
       setTimeout(() => {
         try {
           if (fs.existsSync(output)) fs.unlinkSync(output);

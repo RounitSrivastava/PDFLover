@@ -22,11 +22,14 @@ export async function POST(req) {
   fs.writeFileSync(pdf, buffer);
 
   return new Promise((resolve) => {
+    const helperScript = path.join(process.cwd(), "app", "api", "pdf-to-word", "convert.py");
     exec(
-      `"C:\\Program Files\\LibreOffice\\program\\soffice.exe" --headless --infilter=writer_pdf_import --convert-to docx:\"MS Word 2007 XML\" \"${pdf}\" --outdir \"${tempDir}\"`,
-      (err) => {
+      `python "${helperScript}" "${pdf}" "${docx}"`,
+      (err, stdout, stderr) => {
         if (err) {
-          console.error(err);
+          console.error("Conversion execution error:", err);
+          console.error("stdout:", stdout);
+          console.error("stderr:", stderr);
           resolve(new Response("Conversion failed", { status: 500 }));
           return;
         }

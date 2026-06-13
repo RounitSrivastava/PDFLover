@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function ReelDownloader() {
+export default function StatusDownloader() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -10,10 +10,9 @@ export default function ReelDownloader() {
   const [downloadUrl, setDownloadUrl] = useState(null);
 
   const validateUrl = (testUrl) => {
-    if (!testUrl) return "Please paste an Instagram Reel link.";
-    
-    if (!testUrl.includes("instagram.com/reel/") && !testUrl.includes("instagram.com/p/")) {
-      return "Please enter a valid Instagram Reel URL (e.g., https://www.instagram.com/reel/...)";
+    if (!testUrl) return "Please paste a video or status link.";
+    if (!testUrl.startsWith("http://") && !testUrl.startsWith("https://")) {
+      return "Please enter a valid URL (must start with http:// or https://)";
     }
     return null;
   };
@@ -46,7 +45,7 @@ export default function ReelDownloader() {
     }, 400);
 
     try {
-      const res = await fetch("/api/reel-download", {
+      const res = await fetch("/api/status-download", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,7 +65,7 @@ export default function ReelDownloader() {
       // Auto-trigger download
       const a = document.createElement("a");
       a.href = localUrl;
-      a.download = `instagram_reel_${Date.now()}.mp4`;
+      a.download = `downloaded_status_${Date.now()}.mp4`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -76,7 +75,7 @@ export default function ReelDownloader() {
       clearInterval(intervalId);
       console.error(err);
       setLoading(false);
-      setError("Failed to download reel. Make sure the link is correct and yt-dlp is available.");
+      setError("Failed to download video status. Ensure yt-dlp is configured and the URL is public.");
     }
   };
 
@@ -91,13 +90,13 @@ export default function ReelDownloader() {
   return (
     <div className="main">
       <div className="toolHeader">
-        <h1>Reel Downloader</h1>
-        <p className="subtitle">Download Instagram Reels directly to your device as MP4 video files.</p>
+        <h1>Status Downloader</h1>
+        <p className="subtitle">Download statuses and videos from WhatsApp, TikTok, Twitter, and Facebook.</p>
       </div>
 
       <div className="workspaceCard">
         {error && (
-          <div className="errorCard" style={{ color: "#f87171", borderColor: "rgba(244, 63, 94, 0.2)", background: "rgba(244, 63, 94, 0.05)" }}>
+          <div className="errorCard" style={{ color: "#f43f5e", borderColor: "rgba(244, 63, 94, 0.2)", background: "rgba(244, 63, 94, 0.05)" }}>
             <span>⚠️</span>
             {error}
           </div>
@@ -106,11 +105,11 @@ export default function ReelDownloader() {
         {!loading && !downloadUrl && (
           <div style={{ width: "100%" }}>
             <div className="urlInputContainer">
-              <label className="urlInputLabel">Instagram Reel Link</label>
+              <label className="urlInputLabel">Video or Status Link</label>
               <input
                 type="text"
                 className="urlInput"
-                placeholder="https://www.instagram.com/reel/..."
+                placeholder="Paste link here (e.g. WhatsApp, TikTok, Twitter...)"
                 value={url}
                 onChange={(e) => {
                   setUrl(e.target.value);
@@ -120,7 +119,7 @@ export default function ReelDownloader() {
             </div>
             
             <button className="btn btnMedia" onClick={handleDownload}>
-              Download Video
+              Download Status Media
             </button>
           </div>
         )}
@@ -129,7 +128,7 @@ export default function ReelDownloader() {
           <div className="loaderContainer" style={{ width: "100%" }}>
             <div className="spinner spinnerMedia"></div>
             <div className="loadingText">
-              {progress > 0 ? `Downloading video stream: ${progress}%` : "Fetching Instagram Reel stream data..."}
+              {progress > 0 ? `Downloading media stream: ${progress}%` : "Initiating connection to host..."}
             </div>
             
             {/* Progress Bar Container */}
@@ -155,12 +154,12 @@ export default function ReelDownloader() {
         {downloadUrl && !loading && (
           <div className="successPanel" style={{ border: "1px solid rgba(244, 63, 94, 0.2)", background: "rgba(244, 63, 94, 0.03)" }}>
             <div className="successIcon" style={{ color: "#f43f5e" }}>✓</div>
-            <div className="successTitle">Video Grabbed!</div>
-            <div className="successSubtitle">Your Instagram Reel MP4 file has been prepared.</div>
+            <div className="successTitle">Media Downloaded!</div>
+            <div className="successSubtitle">Your status video file has been successfully downloaded.</div>
             <div className="actionRow">
               <a
                 href={downloadUrl}
-                download={`instagram_reel_${Date.now()}.mp4`}
+                download={`downloaded_status_${Date.now()}.mp4`}
                 className="btn btnMedia"
                 style={{ textDecoration: "none" }}
               >
