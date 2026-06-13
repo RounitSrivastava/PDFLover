@@ -10,9 +10,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="google-site-verification" content="b6WXAF92noiyLCjwQL1nEi165BWLLJdeZttXM_StkmQ" />
+      </head>
       <body>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6320781006360526"
-     crossorigin="anonymous"></script>
+          crossorigin="anonymous"></script>
         <div className="wrapper">
           <Header />
           <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
