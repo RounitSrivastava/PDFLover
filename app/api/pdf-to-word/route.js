@@ -23,8 +23,11 @@ export async function POST(req) {
 
   return new Promise((resolve) => {
     const helperScript = path.join(process.cwd(), "app", "api", "pdf-to-word", "convert.py");
+    const pythonPath = process.env.PYTHON_PATH || "python";
+    const quotedPythonPath = (pythonPath.includes(" ") && !pythonPath.startsWith('"')) ? `"${pythonPath}"` : pythonPath;
+
     exec(
-      `python "${helperScript}" "${pdf}" "${docx}"`,
+      `${quotedPythonPath} "${helperScript}" "${pdf}" "${docx}"`,
       (err, stdout, stderr) => {
         if (err) {
           console.error("Conversion execution error:", err);

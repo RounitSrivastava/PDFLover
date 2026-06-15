@@ -18,14 +18,30 @@ export async function POST(req) {
     // Initial progress setup
     fs.writeFileSync(progressFile, JSON.stringify({ percent: 0 }));
 
-    const ytDlp = spawn("C:\\yt-dlp\\yt-dlp.exe", [
-      "--ffmpeg-location", "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin",
-      "--cookies-from-browser", "firefox",
+    const ytDlpPath = process.env.YT_DLP_PATH || (process.platform === "win32" && fs.existsSync("C:\\yt-dlp\\yt-dlp.exe") ? "C:\\yt-dlp\\yt-dlp.exe" : "yt-dlp");
+    const ffmpegLocation = process.env.FFMPEG_PATH || (process.platform === "win32" && fs.existsSync("C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin") ? "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin" : "");
+
+    const ytDlpArgs = [];
+    if (ffmpegLocation) {
+      ytDlpArgs.push("--ffmpeg-location", ffmpegLocation);
+    }
+
+    if (process.env.YT_DLP_COOKIES_FILE) {
+      ytDlpArgs.push("--cookies", process.env.YT_DLP_COOKIES_FILE);
+    } else if (process.env.YT_DLP_COOKIES_BROWSER) {
+      ytDlpArgs.push("--cookies-from-browser", process.env.YT_DLP_COOKIES_BROWSER);
+    } else if (process.platform === "win32") {
+      ytDlpArgs.push("--cookies-from-browser", "firefox");
+    }
+
+    ytDlpArgs.push(
       "-f", "bv*+ba/b",
       "--merge-output-format", "mp4",
       url,
       "-o", output
-    ]);
+    );
+
+    const ytDlp = spawn(ytDlpPath, ytDlpArgs);
 
     ytDlp.stdout.on("data", (data) => {
       const outputStr = data.toString();

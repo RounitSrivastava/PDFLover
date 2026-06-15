@@ -22,8 +22,11 @@ export async function POST(req) {
   fs.writeFileSync(doc, buffer);
 
   return new Promise((resolve) => {
+    const rawSofficePath = process.env.SOFFICE_PATH || (process.platform === "win32" && fs.existsSync("C:\\Program Files\\LibreOffice\\program\\soffice.exe") ? "C:\\Program Files\\LibreOffice\\program\\soffice.exe" : "soffice");
+    const sofficePath = (rawSofficePath.includes(" ") && !rawSofficePath.startsWith('"')) ? `"${rawSofficePath}"` : rawSofficePath;
+
     exec(
-      `"C:\\Program Files\\LibreOffice\\program\\soffice.exe" --headless --convert-to pdf "${doc}" --outdir "${tempDir}"`,
+      `${sofficePath} --headless --convert-to pdf "${doc}" --outdir "${tempDir}"`,
       (err) => {
         if (err) {
           console.error(err);
