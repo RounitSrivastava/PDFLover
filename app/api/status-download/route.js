@@ -90,6 +90,14 @@ export async function POST(req) {
       console.error("YT-DLP STATUS STDERR:", data.toString());
     });
 
+    ytDlp.on("error", (err) => {
+      console.error("YT-DLP STATUS SPAWN ERROR:", err);
+      try {
+        if (fs.existsSync(progressFile)) fs.unlinkSync(progressFile);
+      } catch {}
+      resolve(new Response(`Failed to start download process: ${err.message}`, { status: 500 }));
+    });
+
     ytDlp.on("close", (code) => {
       try {
         if (fs.existsSync(progressFile)) fs.unlinkSync(progressFile);
