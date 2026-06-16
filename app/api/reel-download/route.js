@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { resolveYtDlpPath } from "../yt-dlp-helper.js";
 
 // Extend Vercel serverless function timeout to 60 seconds
 export const maxDuration = 60;
@@ -20,41 +21,12 @@ export async function POST(req) {
   const output = path.join(tempDir, `${fileId}.mp4`);
   const progressFile = path.join(tempDir, `progress-${fileId}.json`);
 
+  const ytDlpPath = await resolveYtDlpPath();
+  console.log("Using yt-dlp at:", ytDlpPath);
+
   return new Promise((resolve) => {
     // Initial progress setup
     fs.writeFileSync(progressFile, JSON.stringify({ percent: 0 }));
-
-    let ytDlpPath = process.env.YT_DLP_PATH;
-    if (!ytDlpPath) {
-      if (process.platform === "win32") {
-        ytDlpPath = fs.existsSync("C:\\yt-dlp\\yt-dlp.exe") ? "C:\\yt-dlp\\yt-dlp.exe" : "yt-dlp";
-      } else {
-        const bundledPath = path.join(process.cwd(), "bin", "yt-dlp");
-        if (fs.existsSync(bundledPath)) {
-          const tempBinaryPath = path.join("/tmp", "yt-dlp");
-          try {
-            const bundledStats = fs.statSync(bundledPath);
-            let needsCopy = true;
-            if (fs.existsSync(tempBinaryPath)) {
-              const tempStats = fs.statSync(tempBinaryPath);
-              if (tempStats.size === bundledStats.size) {
-                needsCopy = false;
-              }
-            }
-            if (needsCopy) {
-              fs.copyFileSync(bundledPath, tempBinaryPath);
-              fs.chmodSync(tempBinaryPath, "755");
-            }
-            ytDlpPath = tempBinaryPath;
-          } catch (err) {
-            console.error("Failed to copy/chmod bundled yt-dlp binary:", err);
-            ytDlpPath = "yt-dlp";
-          }
-        } else {
-          ytDlpPath = "yt-dlp";
-        }
-      }
-    }
 
     const ffmpegLocation = process.env.FFMPEG_PATH || (process.platform === "win32" && fs.existsSync("C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin") ? "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin" : "");
 

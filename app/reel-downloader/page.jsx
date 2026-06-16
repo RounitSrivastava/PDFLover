@@ -56,7 +56,10 @@ export default function ReelDownloader() {
 
       clearInterval(intervalId);
 
-      if (!res.ok) throw new Error("Download failed");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Download failed");
+      }
 
       const blob = await res.blob();
       const localUrl = URL.createObjectURL(blob);
@@ -76,7 +79,7 @@ export default function ReelDownloader() {
       clearInterval(intervalId);
       console.error(err);
       setLoading(false);
-      setError("Failed to download reel. Make sure the link is correct and yt-dlp is available.");
+      setError(err.message || "Failed to download. Please try again.");
     }
   };
 

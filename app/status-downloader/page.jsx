@@ -55,7 +55,10 @@ export default function StatusDownloader() {
 
       clearInterval(intervalId);
 
-      if (!res.ok) throw new Error("Download failed");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Download failed");
+      }
 
       const blob = await res.blob();
       const localUrl = URL.createObjectURL(blob);
@@ -75,7 +78,7 @@ export default function StatusDownloader() {
       clearInterval(intervalId);
       console.error(err);
       setLoading(false);
-      setError("Failed to download video status. Ensure yt-dlp is configured and the URL is public.");
+      setError(err.message || "Failed to download. Please try again.");
     }
   };
 
