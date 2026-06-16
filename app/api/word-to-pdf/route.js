@@ -1,4 +1,3 @@
-import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 
@@ -8,55 +7,38 @@ export async function POST(req) {
 
   if (!file) return new Response("No file", { status: 400 });
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  // Forward the file to the Railway/Render backend
+  const backendUrl = process.env.CONVERTER_BACKEND_URL;
+  if (!backendUrl) {
+    return new Response("CONVERTER_BACKEND_URL is not set", { status: 500 });
+  }
 
-  const id = Date.now();
+  const forwardForm = new FormData();
+  forwardForm.append("file", file);
 
-  const tempDir = path.join(process.cwd(), "temp");
-  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+  let backendRes;
+  try {
+    backendRes = await fetch(`${backendUrl}/convert/word-to-pdf`, {
+      method: "POST",
+      body: forwardForm,
+    });
+  } catch (err) {
+    console.error("Backend request failed:", err);
+    return new Response("Could not reach conversion backend", { status: 502 });
+  }
 
-  const doc = path.join(tempDir, `${id}.docx`);
-  const pdf = path.join(tempDir, `${id}.pdf`);
+  if (!backendRes.ok) {
+    const errText = await backendRes.text().catch(() => "unknown error");
+    console.error("Backend error:", errText);
+    return new Response("Conversion failed", { status: 500 });
+  }
 
-  fs.writeFileSync(doc, buffer);
+  const pdfBuffer = await backendRes.arrayBuffer();
 
-  return new Promise((resolve) => {
-    const rawSofficePath = process.env.SOFFICE_PATH || (process.platform === "win32" && fs.existsSync("C:\\Program Files\\LibreOffice\\program\\soffice.exe") ? "C:\\Program Files\\LibreOffice\\program\\soffice.exe" : "soffice");
-    const sofficePath = (rawSofficePath.includes(" ") && !rawSofficePath.startsWith('"')) ? `"${rawSofficePath}"` : rawSofficePath;
-
-    exec(
-      `${sofficePath} --headless --convert-to pdf "${doc}" --outdir "${tempDir}"`,
-      (err) => {
-        if (err) {
-          console.error(err);
-          resolve(new Response("Conversion failed", { status: 500 }));
-          return;
-        }
-
-        if (!fs.existsSync(pdf)) {
-          resolve(new Response("PDF not created", { status: 500 }));
-          return;
-        }
-
-        const output = fs.readFileSync(pdf);
-
-        const response = new Response(output, {
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": "attachment; filename=converted.pdf",
-          },
-        });
-
-        setTimeout(() => {
-          try {
-            fs.unlinkSync(doc);
-            fs.unlinkSync(pdf);
-          } catch {}
-        }, 3000);
-
-        resolve(response);
-      }
-    );
+  return new Response(pdfBuffer, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": "attachment; filename=converted.pdf",
+    },
   });
 }

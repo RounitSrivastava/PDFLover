@@ -90,7 +90,7 @@ export default function PdfToWord() {
     } catch (err) {
       console.error(err);
       setLoading(false);
-      setError("PDF to Word conversion failed. Ensure LibreOffice is installed and run in hybrid mode.");
+      setError("Conversion failed. Please ensure LibreOffice is installed on the server. You can set the SOFFICE_PATH in your .env file if it is installed in a non-default location.");
     }
   };
 

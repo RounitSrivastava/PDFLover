@@ -1,4 +1,3 @@
-import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 
@@ -8,59 +7,41 @@ export async function POST(req) {
 
   if (!file) return new Response("No file", { status: 400 });
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  // Forward the file to the Railway/Render backend
+  const backendUrl = process.env.CONVERTER_BACKEND_URL;
+  if (!backendUrl) {
+    return new Response("CONVERTER_BACKEND_URL is not set", { status: 500 });
+  }
 
-  const id = Date.now();
+  // Re-build FormData to forward to backend
+  const forwardForm = new FormData();
+  forwardForm.append("file", file);
 
-  const tempDir = path.join(process.cwd(), "temp");
-  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+  let backendRes;
+  try {
+    backendRes = await fetch(`${backendUrl}/convert/pdf-to-word`, {
+      method: "POST",
+      body: forwardForm,
+    });
+  } catch (err) {
+    console.error("Backend request failed:", err);
+    return new Response("Could not reach conversion backend", { status: 502 });
+  }
 
-  const pdf = path.join(tempDir, `${id}.pdf`);
-  const docx = path.join(tempDir, `${id}.docx`);
+  if (!backendRes.ok) {
+    const errText = await backendRes.text().catch(() => "unknown error");
+    console.error("Backend error:", errText);
+    return new Response("Conversion failed", { status: 500 });
+  }
 
-  fs.writeFileSync(pdf, buffer);
+  // Stream the DOCX response back to the browser
+  const docxBuffer = await backendRes.arrayBuffer();
 
-  return new Promise((resolve) => {
-    const helperScript = path.join(process.cwd(), "app", "api", "pdf-to-word", "convert.py");
-    const pythonPath = process.env.PYTHON_PATH || "python";
-    const quotedPythonPath = (pythonPath.includes(" ") && !pythonPath.startsWith('"')) ? `"${pythonPath}"` : pythonPath;
-
-    exec(
-      `${quotedPythonPath} "${helperScript}" "${pdf}" "${docx}"`,
-      (err, stdout, stderr) => {
-        if (err) {
-          console.error("Conversion execution error:", err);
-          console.error("stdout:", stdout);
-          console.error("stderr:", stderr);
-          resolve(new Response("Conversion failed", { status: 500 }));
-          return;
-        }
-
-        if (!fs.existsSync(docx)) {
-          resolve(new Response("DOCX not created", { status: 500 }));
-          return;
-        }
-
-        const output = fs.readFileSync(docx);
-
-        const response = new Response(output, {
-          headers: {
-            "Content-Type":
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "Content-Disposition": "attachment; filename=converted.docx",
-          },
-        });
-
-        setTimeout(() => {
-          try {
-            fs.unlinkSync(pdf);
-            fs.unlinkSync(docx);
-          } catch {}
-        }, 3000);
-
-        resolve(response);
-      }
-    );
+  return new Response(docxBuffer, {
+    headers: {
+      "Content-Type":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": "attachment; filename=converted.docx",
+    },
   });
 }
