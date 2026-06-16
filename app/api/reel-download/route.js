@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
-import { resolveYtDlpPath } from "../yt-dlp-helper.js";
+import { resolveYtDlpPath, resolveCookieArgs } from "../yt-dlp-helper.js";
 
 // Extend Vercel serverless function timeout to 60 seconds
 export const maxDuration = 60;
@@ -38,13 +38,8 @@ export async function POST(req) {
       ytDlpArgs.push("-f", "best[ext=mp4]/best");
     }
 
-    if (process.env.YT_DLP_COOKIES_FILE) {
-      ytDlpArgs.push("--cookies", process.env.YT_DLP_COOKIES_FILE);
-    } else if (process.env.YT_DLP_COOKIES_BROWSER) {
-      ytDlpArgs.push("--cookies-from-browser", process.env.YT_DLP_COOKIES_BROWSER);
-    } else if (process.platform === "win32") {
-      ytDlpArgs.push("--cookies-from-browser", "firefox");
-    }
+    const cookieArgs = resolveCookieArgs();
+    ytDlpArgs.push(...cookieArgs);
 
     ytDlpArgs.push(url, "-o", output);
 

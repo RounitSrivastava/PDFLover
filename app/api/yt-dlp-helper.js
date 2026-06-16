@@ -3,6 +3,7 @@ import https from "https";
 import path from "path";
 
 const TMP_PATH = "/tmp/yt-dlp";
+const COOKIES_PATH = "/tmp/cookies.txt";
 const GITHUB_URL =
   "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
 
@@ -96,4 +97,43 @@ export async function resolveYtDlpPath() {
   }
 
   return TMP_PATH;
+}
+
+/**
+ * Resolves cookie arguments for yt-dlp.
+ *
+ * Priority:
+ *  1. YT_DLP_COOKIES_FILE  – path to an existing cookies file on disk
+ *  2. INSTAGRAM_COOKIES_CONTENT – raw Netscape cookies.txt content stored
+ *     as a Vercel environment variable; written to /tmp/cookies.txt at runtime
+ *  3. Windows fallback: --cookies-from-browser firefox (local dev only)
+ *  4. [] – no cookies (anonymous; will fail on rate-limited platforms)
+ *
+ * Returns an array of yt-dlp argument strings to spread into ytDlpArgs.
+ */
+export function resolveCookieArgs() {
+  // 1. Explicit file path override
+  if (process.env.YT_DLP_COOKIES_FILE) {
+    return ["--cookies", process.env.YT_DLP_COOKIES_FILE];
+  }
+
+  // 2. Raw cookies content stored as env var (best for Vercel)
+  if (process.env.INSTAGRAM_COOKIES_CONTENT) {
+    try {
+      fs.writeFileSync(COOKIES_PATH, process.env.INSTAGRAM_COOKIES_CONTENT, "utf-8");
+      console.log("Wrote cookies from env var to", COOKIES_PATH);
+      return ["--cookies", COOKIES_PATH];
+    } catch (err) {
+      console.error("Failed to write cookies file:", err.message);
+    }
+  }
+
+  // 3. Browser-based cookies (Windows local dev only)
+  if (process.platform === "win32") {
+    const browser = process.env.YT_DLP_COOKIES_BROWSER || "firefox";
+    return ["--cookies-from-browser", browser];
+  }
+
+  // 4. No cookies – anonymous request
+  return [];
 }
