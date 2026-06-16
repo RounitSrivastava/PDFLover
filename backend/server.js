@@ -37,17 +37,18 @@ app.post("/convert/pdf-to-word", upload.single("file"), (req, res) => {
   // Write uploaded PDF to temp
   fs.writeFileSync(pdfPath, req.file.buffer);
 
-  // Resolve soffice path
-  const sofficePath = process.env.SOFFICE_PATH || "soffice";
+  // Use pdf2docx (Python) for much better layout preservation
+  const pythonPath = "/opt/venv/bin/python3";
+  const scriptPath = path.join(__dirname, "convert.py");
 
-  const cmd = `${sofficePath} --headless --infilter="writer_pdf_import" --convert-to docx:"MS Word 2007 XML" "${pdfPath}" --outdir "${tempDir}"`;
+  const cmd = `${pythonPath} "${scriptPath}" "${pdfPath}" "${docxPath}"`;
 
-  exec(cmd, { timeout: 120000 }, (err, stdout, stderr) => {
+  exec(cmd, { timeout: 180000 }, (err, stdout, stderr) => {
     // Cleanup input PDF
     try { fs.unlinkSync(pdfPath); } catch {}
 
     if (err) {
-      console.error("LibreOffice error:", err.message);
+      console.error("pdf2docx error:", err.message);
       console.error("stderr:", stderr);
       return res.status(500).json({ error: "Conversion failed", details: stderr });
     }
@@ -65,7 +66,6 @@ app.post("/convert/pdf-to-word", upload.single("file"), (req, res) => {
     stream.pipe(res);
 
     stream.on("end", () => {
-      // Cleanup output DOCX after send
       setTimeout(() => { try { fs.unlinkSync(docxPath); } catch {} }, 3000);
     });
 
