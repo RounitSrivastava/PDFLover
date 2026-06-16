@@ -50,8 +50,12 @@ export async function POST(req) {
 
     const ytDlp = spawn(ytDlpPath, ytDlpArgs);
 
+    let stderrOutput = "";
+    let stdoutOutput = "";
+
     ytDlp.stdout.on("data", (data) => {
       const outputStr = data.toString();
+      stdoutOutput += outputStr;
       // Match lines like "[download]  12.4% of ..."
       const match = outputStr.match(/\[download\]\s+(\d+(?:\.\d+)?)\%/);
       if (match) {
@@ -65,7 +69,9 @@ export async function POST(req) {
     });
 
     ytDlp.stderr.on("data", (data) => {
-      console.error("YT-DLP STDERR:", data.toString());
+      const text = data.toString();
+      stderrOutput += text;
+      console.error("YT-DLP STDERR:", text);
     });
 
     ytDlp.on("error", (err) => {
@@ -83,8 +89,9 @@ export async function POST(req) {
       } catch {}
 
       if (code !== 0) {
-        console.error(`yt-dlp process exited with code ${code}`);
-        resolve(new Response("Download failed", { status: 500 }));
+        const detail = (stderrOutput || stdoutOutput || "No output").slice(-500);
+        console.error(`yt-dlp exited with code ${code}:`, detail);
+        resolve(new Response(`yt-dlp exited with code ${code}: ${detail}`, { status: 500 }));
         return;
       }
 
