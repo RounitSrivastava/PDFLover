@@ -10,7 +10,9 @@ export async function GET(req) {
     headers: { "Content-Type": "application/json" }
   });
 
-  const tempDir = path.join(process.cwd(), "temp");
+  const tempDir = process.platform === "win32"
+    ? path.join(process.cwd(), "temp")
+    : "/tmp";
   const progressFile = path.join(tempDir, `progress-${id}.json`);
 
   if (!fs.existsSync(progressFile)) {

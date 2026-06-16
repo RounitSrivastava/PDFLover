@@ -2,13 +2,19 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 
+// Extend Vercel serverless function timeout to 60 seconds
+export const maxDuration = 60;
+
 export async function POST(req) {
   const { url, id: reqId } = await req.json();
 
   if (!url) return new Response("No URL", { status: 400 });
 
-  const tempDir = path.join(process.cwd(), "temp");
-  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+  // On Vercel/Linux, only /tmp is writable. Use /tmp on Linux, local temp/ on Windows.
+  const tempDir = process.platform === "win32"
+    ? path.join(process.cwd(), "temp")
+    : "/tmp";
+  if (process.platform === "win32" && !fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
   const fileId = reqId || Date.now();
   const output = path.join(tempDir, `${fileId}.mp4`);
